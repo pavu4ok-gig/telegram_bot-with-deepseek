@@ -6,8 +6,7 @@ from app.handlers import router
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_PATH = "/webhook"
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # https://ваш-домен.onrender.com/webhook
-
+WEBHOOK_URL = f"https://telegram-bot-with-deepseek.onrender.com{WEBHOOK_PATH}"
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(router)
