@@ -2,6 +2,7 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiohttp import web
+from aiogram import types
 import os
 
 from app.handlers import router
@@ -24,9 +25,9 @@ async def on_shutdown():
     await bot.delete_webhook()
 
 async def handle_request(request):
-    update = await request.json()
-    telegram_update = update
-    await dp.feed_update(telegram_update)
+    update_data = await request.json()      
+    update = types.Update(**update_data)      
+    await dp.process_update(update)           
     return web.Response(text="ok")
 
 app = web.Application()
