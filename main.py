@@ -24,7 +24,7 @@ async def on_shutdown():
     await bot.delete_webhook()
 
 async def handle_request(request):
-    update = await request.json
+    update = await request.json()
     telegram_update = update
     await dp.feed_update(telegram_update)
     return web.Response(text="ok")
