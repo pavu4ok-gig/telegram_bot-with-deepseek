@@ -26,7 +26,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(router)
 
-logger.info(f"Router подключен, количество handlers: {len(dp._handlers)}")
+logger.info("Router успешно подключен к dispatcher")
 
 async def on_startup():
     await bot.set_webhook(
@@ -44,21 +44,16 @@ async def on_shutdown():
     finally:
         await bot.session.close()
 
-# Добавляем тестовый маршрут для диагностики
+# Добавляем тестовый маршрут для проверки
 async def health_check(request):
     return web.Response(text="Bot is running!")
 
 app = web.Application()
-app.router.add_get('/', health_check)  # Тестовый маршрут
+app.router.add_get('/', health_check)  # Для проверки что сервер работает
 
 if __name__ == "__main__":
     logger.info("Настройка приложения...")
     setup_application(app, dp, bot=bot, path=WEBHOOK_PATH)
-    
-    # Выводим все зарегистрированные маршруты
-    logger.info("Зарегистрированные маршруты:")
-    for route in app.router._resources:
-        logger.info(f"  {route}")
     
     app.on_startup.append(lambda app: on_startup())
     app.on_shutdown.append(lambda app: on_shutdown())
