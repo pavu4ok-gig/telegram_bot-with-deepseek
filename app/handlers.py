@@ -3,6 +3,10 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from app.deepseek_request import SendRequestToLLM
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 router = Router()
 
@@ -14,6 +18,8 @@ async def cmd_start(message: Message):
 
 @router.message(lambda message: message.text is not None)
 async def handle_text(message: Message):
+    print(f"ПОЛУЧЕНО: {message.text}")
+    logging.info(f"Получено сообщение: {message.text} от {message.from_user.id}")
     output = req.get_answer(message.text)
     await message.answer(output)
 
