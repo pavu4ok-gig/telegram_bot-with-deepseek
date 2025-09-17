@@ -1,32 +1,30 @@
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import CommandStart
-from app.request_queue import request_queue
+from app.deepseek_request import SendRequestToLLM
 import logging
 
 logging.basicConfig(level=logging.INFO)
 router = Router()
 
+# Создаем один экземпляр для всех запросов
+llm = SendRequestToLLM()
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    await message.answer('🤖 Привет! Бот работает с очередью запросов')
+    await message.answer('🤖 Привет! Бот работает с ограничениями API')
 
 @router.message()
 async def handle_text(message: Message):
+    user_id = message.from_user.id
     print(f"ПОЛУЧЕНО: {message.text}")
-    logging.info(f"Получено сообщение: {message.text} от {message.from_user.id}")
+    logging.info(f"Получено сообщение: {message.text} от {user_id}")
     
-    # Добавляем в очередь вместо немедленной обработки
-    async def send_response(response_text):
-        await message.answer(response_text)
-    
-    await request_queue.add_request(
-        user_id=message.from_user.id,
-        message_text=message.text,
-        response_callback=send_response
-    )
-    
-    # Сразу уведомляем пользователя
-    queue_size = len(request_queue.queue)
-    if queue_size > 0:
-        await message.answer(f"⏳ Ваш запрос в очереди (позиция: {queue_size})")
+    try:
+        # Простой вызов с автоматическими задержками
+        output = llm.get_answer(message.text)
+        await message.answer(output)
+        
+    except Exception as e:
+        logging.error(f"Ошибка обработки сообщения: {e}")
+        await message.answer("Произошла ошибка. Попробуйте позже.")

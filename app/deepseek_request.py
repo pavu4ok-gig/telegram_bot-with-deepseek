@@ -12,13 +12,13 @@ class SendRequestToLLM:
         self.client = OpenAI(
             base_url=LLM_ENDPOINT,
             api_key=LLM_API_KEY,
-            timeout=30  # Ограничиваем время ожидания
+            timeout=30
         )
         self.last_request_time = 0
-        self.min_interval = 2  # Минимум 2 секунды между запросами
+        self.min_interval = 5  # 5 секунд между запросами
     
     def get_answer(self, promt):
-        # Ограничиваем частоту запросов
+        # Принудительная задержка между запросами
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
         if time_since_last < self.min_interval:
@@ -29,17 +29,17 @@ class SendRequestToLLM:
         logger.info('🔄 Отправлен запрос к DeepSeek')
         self.last_request_time = time.time()
         
-        for attempt in range(3):  # Уменьшили до 3 попыток
+        for attempt in range(3):
             try:
                 completion = self.client.chat.completions.create(
                     model=LLM_MODEL,
                     messages=[
                         {
-                            "role": "user",
-                            "content": f"Ты телеграм бот. Ответь кратко на: {promt}"
+                            "role": "user", 
+                            "content": f"Ответь кратко (максимум 100 слов): {promt}"
                         }
                     ],
-                    max_tokens=150,  # Ограничиваем длину ответа
+                    max_tokens=100,  # Ограничиваем длину
                     temperature=0.7
                 )
                 
@@ -47,15 +47,15 @@ class SendRequestToLLM:
                 return completion.choices[0].message.content
                 
             except RateLimitError as e:
-                wait_time = min(10 * (2 ** attempt), 60)  # Максимум 60 сек
+                wait_time = 10 * (2 ** attempt)  # 10, 20, 40 секунд
                 logger.warning(f"⚠️ Rate limit (попытка {attempt + 1}/3). Ожидание {wait_time} сек...")
-                if attempt < 2:  # Не ждем на последней попытке
+                if attempt < 2:
                     time.sleep(wait_time)
                 
             except Exception as e:
-                logger.error(f"❌ Ошибка API (попытка {attempt + 1}/3): {e}")
+                logger.error(f"❌ Ошибка API: {e}")
                 if attempt == 2:
-                    return f"Извините, сервис временно недоступен."
-                time.sleep(2)
+                    return "Извините, сервис временно недоступен."
+                time.sleep(3)
         
-        return "Извините, слишком много запросов. Попробуйте через минуту."
+        return "Слишком много запросов. Попробуйте через минуту."
