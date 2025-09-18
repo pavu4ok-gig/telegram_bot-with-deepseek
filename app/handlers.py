@@ -6,7 +6,7 @@ import logging
 
 router = Router()
 
-reg = SendRequestToLLM()
+req = SendRequestToLLM()
 
 # Создаем один экземпляр для всех запросов
 llm = SendRequestToLLM()
