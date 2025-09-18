@@ -1,57 +1,48 @@
 import os
-from aiohttp import web
-from aiogram import Bot, Dispatcher, types
-from app.handlers import router
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher
+from aiogram.types import Update
+from fastapi import FastAPI, Request
+from app.handlers import register_handlers
+from app.config import BOT_TOKEN
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_PATH = "/webhook"
-WEBHOOK_URL = f"https://telegram-bot-with-deepseek.onrender.com{WEBHOOK_PATH}"
-
+app = FastAPI()
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-dp.include_router(router)
+register_handlers(dp)
 
-async def webhook_handler(request: web.Request):
+# Для Render - URL будет автоматически назначен
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://your-app-name.onrender.com/webhook")
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
     try:
-        print("🔄 Получен webhook запрос")  # Отладочная информация
-        data = await request.json()
-        print(f"📥 Данные от Telegram: {data}")  # Показать что приходит
-        update = types.Update(**data)
+        update_data = await request.json()
+        print(f"Received update: {update_data.get('update_id', 'unknown')}")
+        
+        update = Update(**update_data)
         await dp.feed_update(bot, update)
-        print("✅ Update обработан успешно")
-        return web.Response(text="OK")
+        
+        return {"status": "ok"}
     except Exception as e:
-        print(f"❌ Ошибка обработки webhook: {e}")
-        return web.Response(status=500, text=f"Error: {e}")
+        print(f"Error processing webhook: {e}")
+        return {"status": "error", "message": str(e)}
 
-async def health_check(request):
-    return web.Response(text="🤖 Bot is running!")
-
+@app.on_event("startup")
 async def on_startup():
-    await bot.set_webhook(
-        url=WEBHOOK_URL,
-        drop_pending_updates=True
-    )
-    print(f"🔗 Webhook установлен: {WEBHOOK_URL}")
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url != WEBHOOK_URL:
+        await bot.set_webhook(WEBHOOK_URL)
+        print(f"Webhook set to: {WEBHOOK_URL}")
 
+@app.on_event("shutdown") 
 async def on_shutdown():
-    try:
-        await bot.delete_webhook()
-        print("🗑️ Webhook удален")
-    except Exception as e:
-        print(f"⚠️ Ошибка при удалении webhook: {e}")
-    finally:
-        await bot.session.close()
+    await bot.session.close()
 
-# Создаем приложение и регистрируем маршруты вручную
-app = web.Application()
-app.router.add_post(WEBHOOK_PATH, webhook_handler)  # 👈 Ручная регистрация!
-app.router.add_get("/", health_check)  # Для проверки статуса
+@app.get("/")
+async def root():
+    return {"message": "Bot is running with webhook on Render"}
 
-if __name__ == "__main__":
-    app.on_startup.append(lambda app: on_startup())
-    app.on_shutdown.append(lambda app: on_shutdown())
-    
-    port = int(os.getenv("PORT", 10000))
-    print(f"🚀 Запуск сервера на порту {port}")
-    web.run_app(app, host="0.0.0.0", port=port)
+# Блок if __name__ == "__main__": НЕ НУЖЕН для Render!
+
