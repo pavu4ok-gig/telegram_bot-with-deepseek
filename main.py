@@ -44,5 +44,8 @@ async def on_shutdown():
 async def root():
     return {"message": "Bot is running with webhook on Render"}
 
-# Блок if __name__ == "__main__": НЕ НУЖЕН для Render!
-
+# Добавьте этот блок
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
